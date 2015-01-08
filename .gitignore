@@ -1,0 +1,8 @@
+obj/*
+bin/*
+data/*
+*.exe
+*.lnk
+*.depend
+*.layout
+*.dll
