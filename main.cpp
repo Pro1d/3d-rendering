@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <SDL.h>
 #include <cmath>
-#include <ctime>
 #include <algorithm>
 #include <string>
 
@@ -305,7 +304,7 @@ int main ( int argc, char** argv )
         ta2.rotateZ(0.2f*sin((float)SDL_GetTicks()/2000), PRE);
 */
 
-        clock_t t = clock();
+        Uint32 t = SDL_GetTicks();
 
         engine3d.drawScene(scene);
         /*tb.pop();
@@ -314,7 +313,7 @@ int main ( int argc, char** argv )
         ta1.pop();
         ta2.pop();*/
 
-        int tt = clock()-t;
+        Uint32 tt = SDL_GetTicks()-t;
         printf("%d\n", tt);
 
         if(timeAverage == 0 || abs(timeAverage - tt) / timeAverage > 0.2f) timeAverage = tt;
