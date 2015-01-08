@@ -10,7 +10,7 @@ class Scene
 {
     public:
         Scene(Object3D* skyBox = NULL);
-        Scene(char *fileName, Object3DBuffer & objBuffer);
+        Scene(const char *fileName, Object3DBuffer & objBuffer);
 
         ~Scene();
         bool hasSkyBox() const { return skyBox != NULL; }

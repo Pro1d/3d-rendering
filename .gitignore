@@ -1,6 +1,7 @@
 obj/*
 bin/*
 data/*
+media/*
 *.exe
 *.lnk
 *.depend

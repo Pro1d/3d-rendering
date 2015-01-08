@@ -58,7 +58,7 @@ void Scene::updateBufferSize(Model3D const& m) {
 }
 
 #define eq(s1,s2)   strcmp(s1,s2)==0
-Scene::Scene(char *fileName, Object3DBuffer & objBuffer) : skyBox(NULL)
+Scene::Scene(const char *fileName, Object3DBuffer & objBuffer) : skyBox(NULL)
 {
     #if defined(DEBUG) | defined(_DEBUG)
         printf("Chargement de la scene \"%s\"\n", fileName);;

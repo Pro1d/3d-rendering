@@ -12,7 +12,7 @@
 
 using namespace std;
 
-Object3D::Object3D(const char* fileName, bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(0.3f), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false)
+Object3D::Object3D(const char* fileName, bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(0.3f), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false), texture(NULL)
 {
     bool loadFailed = !loadFromFile(fileName);
 
@@ -50,7 +50,7 @@ Object3D::Object3D(const char* fileName, bool translucent) : vertexCount(0), fac
 */
 }
 int numObj = 0;
-Object3D::Object3D(bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(0.3f), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false)
+Object3D::Object3D(bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(0.3f), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false), texture(NULL)
 {
     sprintf(name, "newObject#%d", ++numObj);
     initColor();
