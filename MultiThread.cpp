@@ -2,7 +2,7 @@
 #include "SDL_thread.h"
 #include <cstdio>
 
-int host(void* p) {d
+int host(void* p) {
     thread_params_t *thp = (thread_params_t*)p;
 
     while(!thp->end) {
