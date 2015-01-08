@@ -1,7 +1,7 @@
 #ifndef MULTITHREAD_H
 #define MULTITHREAD_H
 
-#include <SDL_Thread.h>
+#include <SDL_thread.h>
 
 class ThreadSync {
     public:

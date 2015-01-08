@@ -1,8 +1,8 @@
 #include "MultiThread.h"
-#include "SDL_Thread.h"
+#include "SDL_thread.h"
 #include <cstdio>
 
-int host(void* p) {
+int host(void* p) {d
     thread_params_t *thp = (thread_params_t*)p;
 
     while(!thp->end) {
