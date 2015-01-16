@@ -28,12 +28,12 @@ class RayTracing
         void render(Scene &sceneBuffer);
         void renderMutliThread(Scene &sceneBuffer, MultiThread &mt);
 
-        int getFaceCollision(RayData const& ray, Scene &sceneBuffer, float &distOut, int lastFaceColl);
+        int getFaceCollision(RayData const& ray, Scene &sceneBuffer, float &distOut, bool &reverseSideOut, int lastFaceColl);
         bool isFaceCollision(const float *rayDir, const float *rayOrig, Scene const &sceneBuffer, float distMax, int lastFaceColl);
         void getCoef(Transf_Vertex const& A, Transf_Vertex const& B, Transf_Vertex const& C, RayData const& ray, float *coef);
         float getDist(Transf_Vertex const& A, Transf_Vertex const& B, Transf_Vertex const& C, RayData const& ray);
 
-        bool getRefractRay(RayData &rayTransmit, const float *orig, const float *normal, float n1, float n2);
+        float getRefractRay(RayData &rayTransmit, const float *orig, const float *normal, float n1, float n2);
         void getReflectRay(RayData &rayReflect, const float *orig, const float* normal, float n1, float n2);
 
         rgb_f getColorLight(Scene const& sceneBuffer, rgb_f const& color, Object3D const& obj, float *normal, float *position, int faceColl);

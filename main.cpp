@@ -319,8 +319,8 @@ int main ( int argc, char** argv )
         if(timeAverage == 0 || abs(timeAverage - tt) / timeAverage > 0.2f) timeAverage = tt;
         else timeAverage = timeAverage*0.9 + (float)tt*0.1;
 
-        drawNumber(bmp3d, SDL_MapRGB(bmp3d->format, 0,255,255), 10,10, 18, timeAverage);
-        drawNumber(bmp3d, SDL_MapRGB(bmp3d->format, 0,255,255), 10,10+40, 18, 1000.0f/timeAverage);
+        drawNumber(bmp3d, SDL_MapRGB(bmp3d->format, 0,255,255), 10,10, 12, timeAverage);
+        drawNumber(bmp3d, SDL_MapRGB(bmp3d->format, 0,255,255), 10,10+20, 12, 1000.0f/timeAverage);
 
         SDL_BlitSurface(bmp3d, NULL, screen, NULL);
         SDL_Flip(screen);
@@ -331,6 +331,8 @@ int main ( int argc, char** argv )
                 SDL_WaitEvent(&event);
                 if(event.type == SDL_QUIT)
                     exit(0);
+                else if(event.type == SDL_MOUSEBUTTONDOWN)
+                    SDL_SaveBMP(screen, "capture.bmp");
             } while(event.type == SDL_KEYDOWN ? event.key.keysym.sym != SDLK_F10 : true);
         }
 
