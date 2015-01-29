@@ -13,24 +13,23 @@
 using namespace std;
 #define REFLECT_DEFAULT 1.0f
 
-Object3D::Object3D(const char* fileName, bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(REFLECT_DEFAULT), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false), texture(NULL)
+Object3D::Object3D(const char* fileName, bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(REFLECT_DEFAULT), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false), hasSpecularTexture(false), hasNormalTexture(false), texture(NULL)
 {
     bool loadFailed = !loadFromFile(fileName);
 
+    /// Nom de l'objet
     const char *s = max((const char*)strrchr(fileName, '/')+1, fileName);
     strcpy(name, s);
     char *e = strrchr(name, '.');
     if(e != NULL) *e = '\0';
+
     if(loadFailed)
         strcat(name, "#ERROR");
     else if(hasTexture) {
         char textName[512]; strcpy(textName, fileName);
-
         char *ext = strrchr(textName, '.');
-        if(ext != NULL) *ext = '\0';
-        strcat(textName, ".bmp");
 
-        loadTexture(textName);
+        loadTexture(textName, ext);
     }
 
     #ifdef DEBUG
@@ -51,7 +50,7 @@ Object3D::Object3D(const char* fileName, bool translucent) : vertexCount(0), fac
 */
 }
 int numObj = 0;
-Object3D::Object3D(bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(REFLECT_DEFAULT), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false), texture(NULL)
+Object3D::Object3D(bool translucent) : vertexCount(0), facesCount(0), indice(1), reflect(REFLECT_DEFAULT), isVolumeTranslucent(translucent), hasColor(false), hasTexture(false), hasSpecularTexture(false), hasNormalTexture(false), texture(NULL)
 {
     sprintf(name, "newObject#%d", ++numObj);
     initColor();
@@ -181,24 +180,11 @@ bool Object3D::loadFromFile(const char* fileName)
 
     return true;
 }
-/*void Object3D::updateFaceNormal() {
-    for(int i = faces.size(); --i >= 0;) {
-        //    printf("%d / %d\n", faces[i].vertex_indices[0], vertexCount);
-        faces[i].setNormal(vertex[faces[i].vertex_indices[0]].n);
-    }
-}*/
-void Object3D::loadTexture(const char *fileName) {
-    #ifdef DEBUG
-        printf("Chargement de la texture \"%s\"\n", fileName);
-    #endif
-    SDL_Surface *bmp = SDL_LoadBMP(fileName);
-    if(bmp == NULL) {
-        hasTexture = false;
-        return;
-    }
-    textWidth = bmp->w;
-    textHeight = bmp->h;
-    texture = new rgb_f[bmp->w*bmp->h];
+rgb_f *BitmapToRGB(SDL_Surface* bmp) {
+    rgb_f *rgb = new rgb_f[bmp->w*bmp->h];
+    if(rgb == NULL || bmp == NULL)
+        return NULL;
+
     int bpp = bmp->format->BytesPerPixel;
     for(int y = 0; y < bmp->h; y++)
     for(int x = 0; x < bmp->w; x++)
@@ -222,13 +208,91 @@ void Object3D::loadTexture(const char *fileName) {
             SDL_GetRGB(*(Uint32 *)p, bmp->format, &r, &g, &b);
             break;
         }
-        texture[x+(textHeight-1-y)*textWidth].r = (float) r / 255;
-        texture[x+(textHeight-1-y)*textWidth].g = (float) g / 255;
-        texture[x+(textHeight-1-y)*textWidth].b = (float) b / 255;
+        rgb[x+(bmp->h-1-y)*bmp->w].r = (float) r / 255;
+        rgb[x+(bmp->h-1-y)*bmp->w].g = (float) g / 255;
+        rgb[x+(bmp->h-1-y)*bmp->w].b = (float) b / 255;
+    }
+
+    return rgb;
+}
+/*void Object3D::updateFaceNormal() {
+    for(int i = faces.size(); --i >= 0;) {
+        //    printf("%d / %d\n", faces[i].vertex_indices[0], vertexCount);
+        faces[i].setNormal(vertex[faces[i].vertex_indices[0]].n);
+    }
+}*/
+void Object3D::loadTexture(char *fileName, char* ext) {
+    SDL_Surface *bmp;
+
+    *ext = '\0';
+    strcat(fileName, ".bmp");
+    hasTexture = true;
+    bmp = SDL_LoadBMP(fileName);
+    if(bmp == NULL) {
+        hasTexture = false;
+    } else {
+        #ifdef DEBUG
+            printf("Chargement de la texture \"%s\"\n", fileName);
+        #endif
+        textWidth = bmp->w;
+        textHeight = bmp->h;
+        texture = BitmapToRGB(bmp);
+        SDL_FreeSurface(bmp);
+        if(texture == NULL)
+            hasTexture = false;
+    }
+
+    *ext = '\0';
+    strcat(fileName, ".spec.bmp");
+    hasSpecularTexture = true;
+    bmp = SDL_LoadBMP(fileName);
+    if(bmp == NULL) {
+        hasSpecularTexture = false;
+    } else {
+        #ifdef DEBUG
+            printf("Chargement de la texture speculaire \"%s\"\n", fileName);
+        #endif
+        textSpecularWidth = bmp->w;
+        textSpecularHeight = bmp->h;
+        texture_specular = BitmapToRGB(bmp);
+        SDL_FreeSurface(bmp);
+        if(texture_specular == NULL)
+            hasSpecularTexture = false;
+    }
+
+    *ext = '\0';
+    strcat(fileName, ".normal.bmp");
+    hasNormalTexture = true;
+    bmp = SDL_LoadBMP(fileName);
+    if(bmp == NULL) {
+        hasNormalTexture = false;
+    } else {
+        #ifdef DEBUG
+            printf("Chargement de la texture normal \"%s\"\n", fileName);
+        #endif
+        textNormalWidth = bmp->w;
+        textNormalHeight = bmp->h;
+        texture_normal = BitmapToRGB(bmp);
+        SDL_FreeSurface(bmp);
+        if(texture_normal == NULL)
+            hasNormalTexture = false;
+        else {
+            const rgb_f one(-1,-1,-1);
+            for(int i = textNormalWidth*textNormalHeight; --i >= 0;) {
+                texture_normal[i] = texture_normal[i] * 2.0f + one;
+                normalizeVector((float*)&texture_normal[i]); // F*ck yeah !
+            }
+        }
     }
 }
 rgb_f const& Object3D::getTexturePoint(float s, float t) const {
     return texture[(int)(s*textWidth)+(int)(t*textHeight)*textWidth]; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
+}
+float Object3D::getSpecularPoint(float s, float t) const {
+    return texture_specular[(int)(s*textSpecularWidth)+(int)(t*textSpecularHeight)*textSpecularWidth].r; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
+}
+const float* Object3D::getNormalPoint(float s, float t) const {
+    return (const float*) &texture_normal[(int)(s*textNormalWidth)+(int)(t*textNormalHeight)*textNormalWidth]; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
 }
 void Object3D::initColor()
 {

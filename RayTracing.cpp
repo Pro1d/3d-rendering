@@ -87,7 +87,7 @@ bool RayTracing::isFaceCollision(const float *rayDir, const float *rayOrig, Scen
             Transf_Vertex const&v1 = sceneBuffer.getVertex(f.vertex_indices[0]);
             Transf_Vertex const&v2 = sceneBuffer.getVertex(f.vertex_indices[1]);
             Transf_Vertex const&v3 = sceneBuffer.getVertex(f.vertex_indices[2]);
-            if(Physic3D::collisionFaceStraightLine(v1.p, v2.p, v3.p, rayDir, rayOrig)) { /// TODO collision face orientée
+            if(Physic3D::collisionFaceStraightLineDirect(v1.p, v2.p, v3.p, f.n, rayDir, rayOrig)) { /// TODO collision face orientée
                 float dist = Physic3D::collisionFaceVectorCoef(v1.p, v1.n, rayDir, rayOrig);
                 if(dist > 0 && dist < distMax)
                     return true;
@@ -210,26 +210,49 @@ float RayTracing::getRefractRay(RayData &rayTransmit, const float *orig, const f
     rayTransmit.dir[1] = e*rayTransmit.dir[1] + (e*dotI - dotT)*normal[1];
     rayTransmit.dir[2] = e*rayTransmit.dir[2] + (e*dotI - dotT)*normal[2];
 
-    float cos1 = dotI;
-    float cos2 = -(rayTransmit.dir[0]*normal[0] + rayTransmit.dir[1]*normal[1] + rayTransmit.dir[2]*normal[2]);
+    float cos1 = -(rayTransmit.dir[0]*normal[0] + rayTransmit.dir[1]*normal[1] + rayTransmit.dir[2]*normal[2]);
+    float cos2 = dotI;
     n1 *= cos1;
     n2 *= cos2;
-    /// onde transverse élèctrique perpediculaire ! lol
-    float coef = 4*n1*n2 / ((n1+n2)*(n1+n2));
+    /// onde transverse élèctrique perpediculaire ! lol.
+    float coef = clampIn01(4*n1*n2 / ((n1+n2)*(n1+n2)));
     rayTransmit.intensity *= coef;
     memcpy(rayTransmit.orig, orig, sizeof(float)*3);
 
     return coef;
 }
-void RayTracing::getReflectRay(RayData &rayReflect, const float *orig, const float* normal, float n1, float n2)
+float RayTracing::getReflectRay(RayData &rayReflect, const float *orig, const float* normal, float n1, float n2, bool translucent)
 {
-    Physic3D::collisionFaceVectorBounce(normal, rayReflect.dir, rayReflect.dir);
+    float e = n1/n2;
+    float dotI = -(rayReflect.dir[0]*normal[0] + rayReflect.dir[1]*normal[1] + rayReflect.dir[2]*normal[2]);
+    float dotT2 = 1.0f - e*e*(1.0f - dotI*dotI);
 
-    //rayReflect.intensity *= ((n1-n2)*(n1-n2)) / ((n1+n2)*(n1+n2));
+    float coef = 1.0f;
+    // Reflection total
+    if(dotT2 > 0 && translucent) {
+        float dotT = 1.0f / magic_sqrt_inv(dotT2);
+        float transmitDir[3] = {
+            e*rayReflect.dir[0] + (e*dotI - dotT)*normal[0],
+            e*rayReflect.dir[1] + (e*dotI - dotT)*normal[1],
+            e*rayReflect.dir[2] + (e*dotI - dotT)*normal[2]
+        };
+
+        float cos1 = dotI;
+        float cos2 = -(transmitDir[0]*normal[0] + transmitDir[1]*normal[1] + transmitDir[2]*normal[2]);
+        n1 *= cos1;
+        n2 *= cos2;
+
+        coef = clampIn01(((n1-n2)*(n1-n2)) / ((n1+n2)*(n1+n2)));
+    }
+    rayReflect.intensity *= coef;
+
+    Physic3D::collisionFaceVectorBounce(normal, rayReflect.dir, rayReflect.dir);
     memcpy(rayReflect.orig, orig, sizeof(float)*3);
+
+    return coef;
 }
 
-rgb_f RayTracing::getColorLight(Scene const& sceneBuffer, rgb_f const& color, Object3D const& obj, float *normal, float *position, int faceColl)
+rgb_f RayTracing::getColorLight(Scene const& sceneBuffer, rgb_f const& color, Object3D const& obj, float *normal, float *position, int faceColl, float specularCoef)
 {
     const int lightsCount = sceneBuffer.getLightsCount();
 
@@ -267,13 +290,17 @@ rgb_f RayTracing::getColorLight(Scene const& sceneBuffer, rgb_f const& color, Ob
 
     rgb_f c(color);
     c *= lightDiffuse + lightAmbient;
-    c += lightSpecular;
+    c += lightSpecular * specularCoef;
     c += obj.emissive;
     //c.clamp();
     return c;
 }
-
-void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndice, int lastFaceColl) {
+int reccMax = 0;
+void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndice, int lastFaceColl, int recc) {
+    #ifdef DEBUG
+        if(++recc > reccMax)
+            printf("r:%d i:%f\n", reccMax = recc, ray.intensity);
+    #endif
     /// Intensité trop faible, invisible
     if(ray.intensity < 0.05f) {
         ray.intensity = 0;
@@ -291,22 +318,33 @@ void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndi
     /// Pas de collision
     if(faceColl == -1) {
         ray.color = getColorSky(ray.dir, sceneBuffer);
+        ray.length = 2<<31;
         return;
     }
 
+    ray.length = dist;
+
+    Drawable_Face const& face = sceneBuffer.getFace(faceColl);
     /// Point de contact aA+bB+cC=P, a+b+c=1
-    Transf_Vertex const& A = sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[0]);
-    Transf_Vertex const& B = sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[1]);
-    Transf_Vertex const& C = sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[2]);
+    Transf_Vertex const& A = sceneBuffer.getVertex(face.vertex_indices[0]);
+    Transf_Vertex const& B = sceneBuffer.getVertex(face.vertex_indices[1]);
+    Transf_Vertex const& C = sceneBuffer.getVertex(face.vertex_indices[2]);
+    Object3D const& objParent = * (const Object3D*) A.objParent;
 
     float coef[3];
     getCoef(A, B, C, ray, coef);
-
+    float text[2] = {
+        A.s*coef[0]+B.s*coef[1]+C.s*coef[2],
+        A.t*coef[0]+B.t*coef[1]+C.t*coef[2]
+    };
     float n[3] = {
         coef[0]*A.n[0] + coef[1]*B.n[0] + coef[2]*C.n[0],
         coef[0]*A.n[1] + coef[1]*B.n[1] + coef[2]*C.n[1],
         coef[0]*A.n[2] + coef[1]*B.n[2] + coef[2]*C.n[2]
     };
+    if(objParent.hasNormalTexture) {
+        face.applyTBN(objParent.getNormalPoint(text[0], text[1]), n);
+    }
     normalizeVector(n);
     if(reverseSide) {
         n[0] = -n[0];
@@ -323,82 +361,46 @@ void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndi
         coef[0]*A.c.g + coef[1]*B.c.g + coef[2]*C.c.g,
         coef[0]*A.c.b + coef[1]*B.c.b + coef[2]*C.c.b
     );
-    if(((const Object3D*)A.objParent)->hasTexture)
-        clr *= ((const Object3D*)A.objParent)->getTexturePoint(A.s*coef[0]+B.s*coef[1]+C.s*coef[2],
-                                                               A.t*coef[0]+B.t*coef[1]+C.t*coef[2]);
+
+    /// Texture
+    if(objParent.hasTexture)
+        clr *= objParent.getTexturePoint(text[0], text[1]);
 
     /// Light diffuse/ambient and specular
-    ray.color = getColorLight(sceneBuffer, clr, *(const Object3D*)A.objParent, n, p, faceColl);
+    float specCoef = 1.0f;
+    if(objParent.hasSpecularTexture)
+        specCoef = objParent.getSpecularPoint(text[0], text[1]);
 
-    /// Transmit -> TODO refract
-    float coefTransmit = 0;
-    float indice = reverseSide ? 1.0f : ((const Object3D*)A.objParent)->indice;
-    if(((const Object3D*)A.objParent)->isVolumeTranslucent) {
+    ray.color = getColorLight(sceneBuffer, clr, objParent, n, p, faceColl, specCoef);
+
+    if(objParent.isVolumeTranslucent)
+        ray.color *= 1.0f - objParent.reflect;
+
+    /// Transmit
+    float indice = reverseSide ? 1.0f : objParent.indice;
+    if(objParent.isVolumeTranslucent) {
         RayData rayTransmit(ray);
-        coefTransmit = getRefractRay(rayTransmit, p, n, currentIndice, indice);
-        coefTransmit = clampIn01(coefTransmit);
-        //if(coefTransmit < 0) coefTransmit = 0;
+        float coefTransmit = getRefractRay(rayTransmit, p, n, currentIndice, indice);
+
         if(coefTransmit > 0)
         {
-            getColorRay(rayTransmit, sceneBuffer, indice, faceColl);
+            getColorRay(rayTransmit, sceneBuffer, indice, faceColl, recc);
             ray.color += rayTransmit.color*rayTransmit.intensity;
         }
     }
 
     /// Reflect
     RayData rayReflect(ray);
-    getReflectRay(rayReflect, p, n, currentIndice, indice);
-    rayReflect.intensity *= (1.0f - coefTransmit) * ((const Object3D*)A.objParent)->reflect * 0.75f;
+    float coefReflect = getReflectRay(rayReflect, p, n, currentIndice, indice, objParent.isVolumeTranslucent);
+    bool enableAntiTotalReflect = coefReflect > 0.85f && objParent.isVolumeTranslucent;
+    rayReflect.intensity *= specCoef * objParent.reflect * (enableAntiTotalReflect?0.75f:1.0f);
+    getColorRay(rayReflect, sceneBuffer, currentIndice, faceColl, recc);
 
-    getColorRay(rayReflect, sceneBuffer, currentIndice, faceColl);
     if(rayReflect.intensity > 0)
-        ray.color += rayReflect.color*(rayReflect.intensity / 0.75f);
-
-    /// Get face collision
-    /// get collision to each light (redirection avec indice de refraction ? chagement de couleur ?)
-    /// if necessary compute lighting
-    /// get the color of the point (distance fog ?)
-    /// reccursively get reflection if coef_r > COEF_MIN_VISIBLE
-    /// reccursively get refraction if coef_t > COEF_MIN_VISIBLE
-    /// color = color point * k + (1-k) * (refl*j + refract*(1-j))
-/*
-    if(faceColl != -1) {
-        //sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[0]).c
-        //sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[0]).n
-        /// Point de contact aA+bB+cC=P, a+b+c=1
-        Transf_Vertex &A = sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[0]);
-        Transf_Vertex &B = sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[1]);
-        Transf_Vertex &C = sceneBuffer.getVertex(sceneBuffer.getFace(faceColl).vertex_indices[2]);
-        float n[3]; rgb_f clr;
-        n[0] = a*A.n[0] + b*B.n[0] + c*C.n[0];
-        n[1] = a*A.n[1] + b*B.n[1] + c*C.n[1];
-        n[2] = a*A.n[2] + b*B.n[2] + c*C.n[2];
-        normalizeVector(n);
-        clr.r = a*A.c.r + b*B.c.r + c*C.c.r;
-        clr.g = a*A.c.g + b*B.c.g + c*C.c.g;
-        clr.b = a*A.c.b + b*B.c.b + c*C.c.b;
-
-        rgb_f clr2; float k = 0;
-        if(lastFaceColl == -1) {
-            float bounceDir[3];
-            Physic3D::collisionFaceVectorBounce(n, rayDir, bounceDir);
-            #define DELTA_NORMAL_BOUNCE 0.1f
-            float rayOrig2[3];
-            rayOrig2[0] = a*A.p[0] + b*B.p[0] + c*C.p[0];
-            rayOrig2[1] = a*A.p[1] + b*B.p[1] + c*C.p[1];
-            rayOrig2[2] = a*A.p[2] + b*B.p[2] + c*C.p[2];
-           /*rayOrig[0] += rayDir[0]*dist + n[0]*DELTA_NORMAL_BOUNCE; // TODO : ajuster coéficient, tout mettre dans les dimensions [-1;1]^3
-            rayOrig[1] += rayDir[1]*dist + n[1]*DELTA_NORMAL_BOUNCE;  //
-            rayOrig[2] += rayDir[2]*dist + n[2]*DELTA_NORMAL_BOUNCE;* /
-            clr2 = getColorRay(bounceDir, rayOrig2, sceneBuffer, faceColl);
-            if(clr2.r!=0||clr2.g!=0||clr2.b!=0) /// so bad ! -> TODO
-                k = 0.3f;
-        }
-
-        return clr*(1-k) + clr2*k;
-    }
-    else
-        return rgb_f(0,0,0);*/
+        ray.color += rayReflect.color*(rayReflect.intensity / (enableAntiTotalReflect?0.75f:1.0f));
+    #ifdef DEBUG
+        recc--;
+    #endif
 }
 
 rgb_f RayTracing::getColorSky(float *raydir, Scene &sceneBuffer) {
@@ -434,6 +436,8 @@ rgb_f RayTracing::getColorSky(float *raydir, Scene &sceneBuffer) {
         }
     }
 
+
+
     return rgb_f();
 }
 
@@ -459,6 +463,7 @@ void RayTracing::render(Scene &sceneBuffer) {
             ray.intensity = 1.0f;
             getColorRay(ray, sceneBuffer);
             colorBuf[x+width * (height - y - 1)] = ray.color*ray.intensity;
+            depthBuf[x+width * (height - y - 1)] = ray.length;
             vx += 2.0f/width;
         }
         vy += 2.0f/height * ((float)height / width);
@@ -493,8 +498,10 @@ void funcRayTracingRender(thread_params_t* params) {
             ray.intensity = 1.0f;
             ((RayTracing_params_t*)params->params)->rt.getColorRay(ray, ((RayTracing_params_t*)params->params)->sceneBuffer);
             ((RayTracing_params_t*)params->params)->rt.colorBuf[x+width * (height - y - 1)] = ray.color*ray.intensity;
+            ((RayTracing_params_t*)params->params)->rt.depthBuf[x+width * (height - y - 1)] = ray.length;
             vx += 2.0f/width;
         }
+        //printf("%d : %f%%\n", params->threadNum, (float)y/height*100);
         vy += params->threadCount * 2.0f/height * ((float)height / width);
     }
 }

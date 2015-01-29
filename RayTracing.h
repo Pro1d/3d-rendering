@@ -24,6 +24,7 @@ class RayTracing
         ~RayTracing();
         void setParams(int w, int h, float z) { width = w; height = h; zNear = z; }
         void setColorBuf(rgb_f *cbuf) { colorBuf = cbuf; }
+        void setDepthBuf(float *dbuf) { depthBuf = dbuf; }
 
         void render(Scene &sceneBuffer);
         void renderMutliThread(Scene &sceneBuffer, MultiThread &mt);
@@ -34,16 +35,17 @@ class RayTracing
         float getDist(Transf_Vertex const& A, Transf_Vertex const& B, Transf_Vertex const& C, RayData const& ray);
 
         float getRefractRay(RayData &rayTransmit, const float *orig, const float *normal, float n1, float n2);
-        void getReflectRay(RayData &rayReflect, const float *orig, const float* normal, float n1, float n2);
+        float getReflectRay(RayData &rayReflect, const float *orig, const float* normal, float n1, float n2, bool translucent);
 
-        rgb_f getColorLight(Scene const& sceneBuffer, rgb_f const& color, Object3D const& obj, float *normal, float *position, int faceColl);
-        void getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndice = 1.0f, int lastFaceColl = -1);
+        rgb_f getColorLight(Scene const& sceneBuffer, rgb_f const& color, Object3D const& obj, float *normal, float *position, int faceColl, float specularCoef);
+        void getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndice = 1.0f, int lastFaceColl = -1, int recc=0);
         rgb_f getColorSky(float *raydir, Scene &sceneBuffer);
 
         /// PRIVATE
         int width, height;
         float zNear;
         rgb_f* colorBuf;
+        float* depthBuf;
         KDTree *currentTree;
     protected:
     private:

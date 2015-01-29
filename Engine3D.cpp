@@ -76,6 +76,7 @@ Engine3D::Engine3D(SDL_Surface* s) : mTh(THREAD_COUNT)
 
     mRT.setParams(width, height, zNear);
     mRT.setColorBuf(colorBuf);
+    mRT.setDepthBuf(depthBuf);
     enableRayTracing = false;
 }
 
@@ -286,6 +287,8 @@ void Engine3D::objectToBuffer(Object3D const& obj, Scene& sceneBuffer)
         v3.isUsed = true;
         if(enableRayTracing) {
             getFaceNormal(v1.p, v2.p, v3.p, face.n);
+            if(obj.hasNormalTexture)
+                face.setTBNMatrix(v1, v2, v3);
         }
     }
 }
@@ -424,7 +427,6 @@ void Engine3D::drawScene(Scene& scene)
             mRT.render(scene);
         else
             mRT.renderMutliThread(scene, mTh);
-        toggleRayTracing();
     }
     else if(!MTH_ENABLED)
         draw(scene);
@@ -433,6 +435,8 @@ void Engine3D::drawScene(Scene& scene)
 
     /// Apply effect and draw to SDL surface
     postEffects();
+    if(enableRayTracing)
+        toggleRayTracing();
 
     SDL_LockSurface(src);
     push();
@@ -1019,27 +1023,37 @@ void Engine3D::postEffects() {
 
         /// Compute the Z distance in focus with depth of field
         float zFocus = depthBuf[pixelFocusIndex];
-        zDoFFocus = zDoFFocus * speedChangeFocusDoF + zFocus * (1.0f-speedChangeFocusDoF);
+        zDoFFocus = enableRayTracing ? zFocus : zDoFFocus * speedChangeFocusDoF + zFocus * (1.0f-speedChangeFocusDoF);
+
+        float *CoCarray = new float[pixelCount*3];
+        for(int i = pixelCount; --i >= 0;) {
+            CoCarray[i*3] = maxRadiusDoF * clampIn01((enableRayTracing ? 1.0f : gradientRadiusDoF) * abs(1.0f-(zDoFFocus)/depthBuf[i]));
+            CoCarray[i*3+1] = CoCarray[i*3]*CoCarray[i*3];
+            CoCarray[i*3+2] = clampIn01(1.0f/CoCarray[i*3+1]);
+        }
 
         for(int y = 0; y < height; y++)
         for(int x = 0; x < width; x++, i++) {
             if(depthBuf[i] < zFar)
             {
-                const float CoC = maxRadiusDoF * clampIn01(gradientRadiusDoF * abs(1.0f-(zDoFFocus)/depthBuf[i])), CoC2 = CoC*CoC;
-                const float alpha = clampIn01(1.0f/(CoC2));
+                const float CoC = CoCarray[i*3], CoC2 = CoCarray[i*3+1];
+                const float alpha = CoCarray[i*3+2];
                 const int c = CoC+1;//0.5f;
                 for(int a = max(0, x-c), aa = min(width-1, x+c); a <= aa ; a++)
                 for(int b = max(0, y-c), bb = min(height-1, y+c); b <= bb ; b++) {
                     int d2 = (a-x)*(a-x)+(b-y)*(b-y);
-                    if(depthBuf[i] <= depthBuf[a+b*width]+CoC) // zi za
+                    //if(depthBuf[i] <= depthBuf[a+b*width]+CoC) // zi za
                     if(CoC2 >= d2)
                     {
-                        colorBuf_f[a+b*width].add(colorBuf[i], alpha);
+                        float overAlpha = (depthBuf[i] > depthBuf[a+b*width]+CoC) ? clampIn01(1.0f-CoCarray[(a+b*width)*3+2]) : 1;
+                        colorBuf_f[a+b*width].add(colorBuf[i], alpha * overAlpha);
                     }
                 }
             }
 
         }
+        delete[] CoCarray;
+
         for(i = 0; i < height*width; ++i) {
             rgb_f c(colorBuf_f[i].getRGB(colorBuf[i]));
             colorBuf[i].r = c.r;

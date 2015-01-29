@@ -16,9 +16,13 @@ class Object3D
         Object3D(const char* filename, bool translucent=false);
         ~Object3D() { if(texture != NULL) delete texture; }
         bool loadFromFile(const char* fileName);
-        void loadTexture(const char* fileName);
+        void loadTexture(char* fileName, char* ext);
 
         rgb_f const& getTexturePoint(float s, float t) const;
+        const float * getNormalPoint(float s, float t) const;
+        float getSpecularPoint(float s, float t) const;
+
+
         //void updateFaceNormal();
         int vertexCount, facesCount;
         std::vector<Vertex> vertex;
@@ -31,11 +35,13 @@ class Object3D
         char name[100];
         float AABB[6];
         float centerBS[4], radiusBS; // Bounding Sphere
-        bool hasTexture;
+        bool hasTexture, hasNormalTexture, hasSpecularTexture;
     private:
         bool hasColor;
-        rgb_f *texture;
+        rgb_f *texture, *texture_normal, *texture_specular;
         int textWidth, textHeight;
+        int textNormalWidth, textNormalHeight;
+        int textSpecularWidth, textSpecularHeight;
 };
 
 class Object3DBuffer {
