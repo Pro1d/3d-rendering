@@ -439,7 +439,7 @@ void Engine3D::drawScene(Scene& scene)
         toggleRayTracing();
 
     SDL_LockSurface(src);
-    push();
+    toBitmap();
     SDL_UnlockSurface(src);
 }
 
@@ -1018,7 +1018,7 @@ void Engine3D::postEffects() {
             volumeRendering();
     }
 
-    if(enableDepthOfField) {
+    if(enableDepthOfField && !enableRayTracing) {
         int i = 0;
 
         /// Compute the Z distance in focus with depth of field
@@ -1202,7 +1202,7 @@ void Engine3D::filters2D() {
 */
 }
 
-void Engine3D::push() {
+void Engine3D::toBitmap() {
     Uint8 bpp = src->format->BytesPerPixel;
     for(int y = 0; y < height; ++y)
     for(int x = 0; x < width; ++x) {
@@ -1215,6 +1215,22 @@ void Engine3D::push() {
             p[0] = clampIn01(colorBuf[x+y*width].b) * 255;
             p[1] = clampIn01(colorBuf[x+y*width].g) * 255;
             p[2] = clampIn01(colorBuf[x+y*width].r) * 255;
+        }
+    }
+}
+void Engine3D::toBitmap(SDL_Surface *bmp, rgb_f* color, int width, int height) {
+    Uint8 bpp = bmp->format->BytesPerPixel;
+    for(int y = 0; y < height; ++y)
+    for(int x = 0; x < width; ++x) {
+        Uint8 *p = (Uint8 *)bmp->pixels + y * bmp->pitch + x * bpp;
+        if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+            p[0] = clampIn01(color[x+y*width].r) * 255;
+            p[1] = clampIn01(color[x+y*width].g) * 255;
+            p[2] = clampIn01(color[x+y*width].b) * 255;
+        } else {
+            p[0] = clampIn01(color[x+y*width].b) * 255;
+            p[1] = clampIn01(color[x+y*width].g) * 255;
+            p[2] = clampIn01(color[x+y*width].r) * 255;
         }
     }
 }

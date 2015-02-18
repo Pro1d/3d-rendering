@@ -72,6 +72,12 @@ class Engine3D
                 printf("fov=%f->zNear=%f\n", fov, zNear);
             #endif
         }
+        int getWidth() { return width; }
+        int getHeight() { return height; }
+        rgb_f* getColorBuf() { return colorBuf; }
+        rgb_f* getColorBuf2() { return colorBuf_f; }
+        rgb_f* getColorBuf3() { return colorBuf_g; }
+        float* getDepthBuf() { return depthBuf; }
 
         void toggleDrawingFilter() { enableDrawingFilter = !enableDrawingFilter; }
         void toggleRayTracing() { enableRayTracing = !enableRayTracing; }
@@ -88,9 +94,6 @@ class Engine3D
         void putPointBuf(rgb_f *dst, float* depth, int x, int y, float z, rgb_f const& c);
         void clearBuf();
         void clearZBuffer();
-        void putPointBufSecure(int x, int y, float z, rgb_f const&  c);
-        void putPointBufVolume(int x, int y, float z, rgb_f const&  c, bool front);
-        void putPointBufSecureVolume(int x, int y, float z, rgb_f const&  c, bool front);
         void glowMultiThread();
         void glow();
         void volumeRenderingMultiThread();
@@ -100,29 +103,36 @@ class Engine3D
 
         void postEffects();
         void filters2D();
-        void push();
-
-        /// Triangle couleur volume
-        void triangleVolume(const float* A, const float* B, const float* C, rgb_f const& c, bool front);
-        void triangleSupVolume(const float *A, const float *B, const float *C, rgb_f const& color, bool front);
-        void triangleInfVolume(const float *A, const float *B, const float *C, rgb_f const& color, bool front);
-        void triangleSortedPointsVolume(const float* A, const float* B, const float* C, rgb_f const& c, bool front);
-        /// Triangle couleurs interpolées
-        void triangle(rgb_f *dst, float* depth, const float* A, const float* B, const float* C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
-        void triangleSup(rgb_f *dst, float* depth, const float *A, const float *B, const float *C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
-        void triangleInf(rgb_f *dst, float* depth, const float *A, const float *B, const float *C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
-        void triangleSortedPoints(rgb_f *dst, float* depth, const float* A, const float* B, const float* C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
-
-        bool isOrientZ(const float* A, const float* B, const float* C);
-        rgb_f getColor(rgb_f const& mat, float *normal);
+        void toBitmap();
+        static void toBitmap(SDL_Surface *bmp, rgb_f* color, int width, int height);
 
         void drawScene(Scene& scene);
         void drawSkyBox(Object3D const& sky);
 
-
         void setVertexColorWithLights(Transf_Vertex & vertex, Scene const& sceneBuffer);
 
+        /// Triangle couleur volume
+        void triangleVolume(const float* A, const float* B, const float* C, rgb_f const& c, bool front);
+        /// Triangle couleurs interpolées
+        void triangle(rgb_f *dst, float* depth, const float* A, const float* B, const float* C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
+
     protected:
+        bool isOrientZ(const float* A, const float* B, const float* C);
+        rgb_f getColor(rgb_f const& mat, float *normal);
+
+        /// Triangle couleur volume
+        void triangleSupVolume(const float *A, const float *B, const float *C, rgb_f const& color, bool front);
+        void triangleInfVolume(const float *A, const float *B, const float *C, rgb_f const& color, bool front);
+        void triangleSortedPointsVolume(const float* A, const float* B, const float* C, rgb_f const& c, bool front);
+        /// Triangle couleurs interpolées
+        void triangleSup(rgb_f *dst, float* depth, const float *A, const float *B, const float *C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
+        void triangleInf(rgb_f *dst, float* depth, const float *A, const float *B, const float *C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
+        void triangleSortedPoints(rgb_f *dst, float* depth, const float* A, const float* B, const float* C, rgb_f const& colorA, rgb_f const& colorB, rgb_f const& colorC);
+
+        void putPointBufSecure(int x, int y, float z, rgb_f const&  c);
+        void putPointBufVolume(int x, int y, float z, rgb_f const&  c, bool front);
+        void putPointBufSecureVolume(int x, int y, float z, rgb_f const&  c, bool front);
+
         void drawObject(Object3D const& obj, bool enablePerspective = false);
         void draw(Model3D const& model);
 

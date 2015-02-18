@@ -304,6 +304,9 @@ void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndi
     /// Intensité trop faible, invisible
     if(ray.intensity < 0.05f) {
         ray.intensity = 0;
+        #ifdef DEBUG
+            recc--;
+        #endif
         return;
     }
 
@@ -318,7 +321,10 @@ void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndi
     /// Pas de collision
     if(faceColl == -1) {
         ray.color = getColorSky(ray.dir, sceneBuffer);
-        ray.length = 2<<31;
+        ray.length = 1e10;
+        #ifdef DEBUG
+            recc--;
+        #endif
         return;
     }
 

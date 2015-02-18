@@ -65,8 +65,12 @@
 		<Unit filename="Object3D.h" />
 		<Unit filename="Physic3D.cpp" />
 		<Unit filename="Physic3D.h" />
+		<Unit filename="PostEffect.cpp" />
+		<Unit filename="PostEffect.h" />
 		<Unit filename="RayTracing.cpp" />
 		<Unit filename="RayTracing.h" />
+		<Unit filename="RenderingRT.cpp" />
+		<Unit filename="RenderingRT.h" />
 		<Unit filename="Scene.cpp" />
 		<Unit filename="Scene.h" />
 		<Unit filename="Transformation.cpp" />

@@ -15,6 +15,7 @@ class RayData {
         float length;
         float intensity;
         rgb_f color;
+        //Object3d* material;
 };
 
 class RayTracing
