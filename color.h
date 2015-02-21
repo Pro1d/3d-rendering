@@ -41,6 +41,9 @@ class rgb_f {
         rgb_f & operator*=(rgb_f const& c) { r*=c.r; g*=c.g; b*=c.b; return *this; }
         rgb_f & operator*=(float k) { r*=k; g*=k; b*=k; return *this; }
         rgb_f operator*(float const& k) const { return rgb_f(r*k, g*k, b*k); }
+        rgb_f operator/(float const& k) const { return rgb_f(r/k, g/k, b/k); }
+        rgb_f operator+(float const& k) const { return rgb_f(r+k, g+k, b+k); }
+        rgb_f operator-(float const& k) const { return rgb_f(r-k, g-k, b-k); }
         rgb_f operator+(rgb_f const& d) const { return rgb_f(r+d.r, g+d.g, b+d.b); }
 
         float r,g,b, s;

@@ -5,7 +5,7 @@
 
 using namespace std;
 
-PostEffect::PostEffect(rgb_f *color, float *depth, rgb_f* destination, int width, int height) : color(color), depth(depth), dst(destination), width(width), height(height), enabled(true)
+PostEffect::PostEffect(rgb_f *color, float *depth, rgb_f* destination, int width, int height) : color(color), depth(depth), dst(destination), tmp(NULL), width(width), height(height), enabled(true)
 {
     //ctor
 }
@@ -104,4 +104,15 @@ void DepthOfField::apply()
         dst[i].g = c.g;
         dst[i].b = c.b;
     }
+}
+
+FastGlow::FastGlow(rgb_f *color, float *depth, rgb_f* destination, int witdh, int height, float radius) :
+    PostEffect(color, depth, destination, width, height), radius(radius)
+{
+
+}
+
+void FastGlow::apply()
+{
+
 }

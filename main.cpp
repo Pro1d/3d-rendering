@@ -50,7 +50,10 @@ int main ( int argc, char** argv )
     Engine3D engine3d(bmp3d);
 
     Object3DBuffer objBuffer;
-    Scene scene("data/parc.scene", objBuffer);
+    char sceneFileName[128] = "data/room.scene";
+    if(argc > 1)
+        strcpy(sceneFileName, argv[1]);
+    Scene scene(sceneFileName, objBuffer);
 
     srand(42);
     SDL_WarpMouse(screen->w/2, screen->h/2);
@@ -108,8 +111,10 @@ int main ( int argc, char** argv )
                 if(buttonLeftDown) {
                     engine3d.setPixelFocus(event.motion.x, event.motion.y);
                     float depthFocus = engine3d.getDepthBuf()[event.motion.x + engine3d.getWidth() * event.motion.y];
-                    dof.setDepthFocus(depthFocus);
-                    dof.setDepthMax(depthFocus*100.5f);
+                    if(SDL_GetModState()&KMOD_ALT)
+                        dof.setDepthMax(depthFocus);
+                    else
+                        dof.setDepthFocus(depthFocus);
                 }
                 break;
             case SDL_KEYUP:
@@ -153,12 +158,13 @@ int main ( int argc, char** argv )
                         else
                             rayTracingRenderingRequested = true;
                         break;
-                    case SDLK_PRINT: {
-                        time_t rawtime;
-                        time (&rawtime);
-                        char fileName[150];
-                        sprintf(fileName, "capture - %s.bmp", ctime (&rawtime));
-                        SDL_SaveBMP(screen, fileName);
+                    case SDLK_p: {
+                        time_t rawtime = time(NULL);
+                        struct tm *date = localtime(&rawtime);
+                        char fileName[150], dateStr[150];
+                        strftime(dateStr, 150, "%F %Hh%Mm%S", date);
+                        sprintf(fileName, "capture - %s.bmp", dateStr);
+                        SDL_SaveBMP(bmp3d, fileName);
                     }   break;
                     case SDLK_ESCAPE:
                         done = true;

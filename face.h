@@ -27,53 +27,48 @@ class Drawable_Face : public Face
         float n[3];/// normal
         /// la normale 'n' doit déjà être calculée
         void setTBNMatrix(Transf_Vertex const& v1, Transf_Vertex const& v2, Transf_Vertex const& v3) {
-            float s1 = v2.s - v1.s, t1 = v2.t - v1.t;
-            float s2 = v3.s - v1.s, t2 = v3.t - v1.t;
-            float q1[3] = {
-                v2.p[0] - v1.p[0],
-                v2.p[1] - v1.p[1],
-                v2.p[2] - v1.p[2]
-            };
-            float q2[3] = {
-                v3.p[0] - v1.p[0],
-                v3.p[1] - v1.p[1],
-                v3.p[2] - v1.p[2]
-            };
+            float s1 = v2.s - v1.s;
+            float t1 = v2.t - v1.t;
+            float s2 = v3.s - v1.s;
+            float t2 = v3.t - v1.t;
+
+            float x1 = v2.p[0] - v1.p[0];
+            float y1 = v2.p[1] - v1.p[1];
+            float z1 = v2.p[2] - v1.p[2];
+
+            float x2 = v3.p[0] - v1.p[0];
+            float y2 = v3.p[1] - v1.p[1];
+            float z2 = v3.p[2] - v1.p[2];
+
             float det = 1.0f / (s1*t2-s2*t1);
             float T[3] = {
-                det * (q1[0]*t2+q2[0]*(-t1)),
-                det * (q1[1]*t2+q2[1]*(-t1)),
-                det * (q1[2]*t2+q2[2]*(-t1))
+                det * (t2 * x1 - t1 * x2),
+                det * (t2 * y1 - t1 * y2),
+                det * (t2 * z1 - t1 * z2)
             };
             float B[3] = {
-                det * (q1[0]*(-s2)+q2[0]*s1),
-                det * (q1[1]*(-s2)+q2[1]*s1),
-                det * (q1[2]*(-s2)+q2[2]*s1)
+                det * (s1 * x2 - s2 * x1),
+                det * (s1 * y2 - s2 * y1),
+                det * (s1 * z2 - s2 * z1)
             };
-            float dotNT = n[0]*T[0] + n[1]*T[1] + n[2]*T[2];
-            matrixTBN[0] = T[0] - dotNT * n[0];
-            matrixTBN[1] = T[1] - dotNT * n[1];
-            matrixTBN[2] = T[2] - dotNT * n[2];
 
-            float dotNB = n[0]*B[0] + n[1]*B[1] + n[2]*B[2];
-            float dotTB = matrixTBN[0]*B[0] + matrixTBN[1]*B[1] + matrixTBN[2]*B[2];
-            float norm2T = (T[0]*T[0]+T[1]*T[1]+T[2]*T[2]);
-            matrixTBN[3] = B[0] - dotNB * n[0] - dotTB * matrixTBN[0] / norm2T;
-            matrixTBN[4] = B[1] - dotNB * n[1] - dotTB * matrixTBN[1] / norm2T;
-            matrixTBN[5] = B[2] - dotNB * n[2] - dotTB * matrixTBN[2] / norm2T;
-
-            normalizeVector(matrixTBN);
-            normalizeVector(matrixTBN+3);
-
-            matrixTBN[6] = n[0];
-            matrixTBN[7] = n[1];
+            normalizeVector(B);
+            normalizeVector(T);
+            matrixTBN[0] = T[0];
+            matrixTBN[3] = T[1];
+            matrixTBN[6] = T[2];
+            matrixTBN[1] = B[0];
+            matrixTBN[4] = B[1];
+            matrixTBN[7] = B[2];
+            matrixTBN[2] = n[0];
+            matrixTBN[5] = n[1];
             matrixTBN[8] = n[2];
-            //matrixTBN[];
         }
         void applyTBN(const float* localNormal, float* out) const {
             out[0] = localNormal[0]*matrixTBN[0] + localNormal[1]*matrixTBN[1] + localNormal[2]*matrixTBN[2];
             out[1] = localNormal[0]*matrixTBN[3] + localNormal[1]*matrixTBN[4] + localNormal[2]*matrixTBN[5];
             out[2] = localNormal[0]*matrixTBN[6] + localNormal[1]*matrixTBN[7] + localNormal[2]*matrixTBN[8];
+            //normalizeVector(out);
         }
         float matrixTBN[3*3];
 };

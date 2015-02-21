@@ -14,6 +14,7 @@ class PostEffect
         void setEnabled(bool e) { enabled = e; }
         void setColorSrc(rgb_f* c) { color = c; }
         void setColorDst(rgb_f* c) { dst = c; }
+        void setColorTmp(rgb_f* c) { tmp = c; }
         //virtual void apply();
     protected:
         rgb_f *color;
@@ -21,6 +22,7 @@ class PostEffect
         int width, height;
 
         rgb_f *dst; /// destination de l'image obtenue
+        rgb_f *tmp; /// buffer intermédiaire
     private:
         bool enabled;
 };
@@ -48,6 +50,17 @@ class DepthOfField : public PostEffect
         void apply();
     private:
         float depthFocus, depthMax, radiusMax;
+};
+
+class FastGlow : public PostEffect
+{
+    public:
+        FastGlow(rgb_f *color, float *depth, rgb_f* destination, int witdh, int height, float radius = ANTI_ALIASING ? 40 : 20);
+        void setRadius(float r) { radius = r; }
+        float getRadius() { return radius; }
+        void apply();
+    private:
+        float radius;
 };
 
 #endif // POSTEFFECTS_H

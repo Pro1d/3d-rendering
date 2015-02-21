@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "tools.h"
 #include "Physic3D.h"
+#include "Engine3D.h"
 #include "KDTree.h"
 
 using std::list;
@@ -328,6 +329,7 @@ void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndi
         return;
     }
 
+
     ray.length = dist;
 
     Drawable_Face const& face = sceneBuffer.getFace(faceColl);
@@ -348,15 +350,23 @@ void RayTracing::getColorRay(RayData &ray, Scene &sceneBuffer, float currentIndi
         coef[0]*A.n[1] + coef[1]*B.n[1] + coef[2]*C.n[1],
         coef[0]*A.n[2] + coef[1]*B.n[2] + coef[2]*C.n[2]
     };
+    normalizeVector(n);
     if(objParent.hasNormalTexture) {
         face.applyTBN(objParent.getNormalPoint(text[0], text[1]), n);
     }
-    normalizeVector(n);
     if(reverseSide) {
         n[0] = -n[0];
         n[1] = -n[1];
         n[2] = -n[2];
     }
+
+    if(DRAW_NORMAL_MAP) {
+        rgb_f xyz(*((rgb_f*) n));
+        ray.color = (xyz + 1.0f) * 0.5f;
+
+        return;
+    }
+
     float p[3] = {
         coef[0]*A.p[0] + coef[1]*B.p[0] + coef[2]*C.p[0],
         coef[0]*A.p[1] + coef[1]*B.p[1] + coef[2]*C.p[1],

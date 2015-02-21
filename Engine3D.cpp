@@ -447,9 +447,9 @@ void Engine3D::setVertexColorWithLights(Transf_Vertex & vertex, Scene const& sce
 {
     /// obj.emissive + v.color * (obj.ambient * Sum(light.ambient) + obj.diffuse * Sum(dotNL * light.diffuse * rayIntesity)) + obj.specular * Sum(sped * light.specular * rayIntensity)
     #if DRAW_NORMAL_MAP == 1
-        vertex.c.r = vertex.n[0];
-        vertex.c.g = vertex.n[1];
-        vertex.c.b = vertex.n[2];
+        vertex.c.r = (vertex.n[0]+1)/2;
+        vertex.c.g = (vertex.n[1]+1)/2;
+        vertex.c.b = (vertex.n[2]+1)/2;
         return;
     #endif // DRAW_NORMAL_MAP
 
@@ -1004,7 +1004,7 @@ void Engine3D::distanceFog() {
 }
 
 void Engine3D::postEffects() {
-    if(enableFog) {
+    if(enableFog && !enableRayTracing) {
         if(MTH_ENABLED)
             distanceFogMultiThread();
         else

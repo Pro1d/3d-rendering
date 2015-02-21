@@ -139,7 +139,7 @@ bool Object3D::loadFromFile(const char* fileName)
             fscanf(f, "%f%f", &vertex[i].s, &vertex[i].t);
         }
 
-        int c[3] = {1,1,1};
+        int c[3] = {255, 255, 255};
         /// Color if existing
         if(hasColor) {
             fscanf(f, "%d%d%d", &c[0], &c[1], &c[2]);
@@ -279,20 +279,26 @@ void Object3D::loadTexture(char *fileName, char* ext) {
         else {
             const rgb_f one(-1,-1,-1);
             for(int i = textNormalWidth*textNormalHeight; --i >= 0;) {
-                texture_normal[i] = texture_normal[i] * 2.0f + one;
+                texture_normal[i] = (texture_normal[i] * 255.0f / 128.0f + one);
                 normalizeVector((float*)&texture_normal[i]); // F*ck yeah !
             }
         }
     }
 }
+
+#define mod(x, y) (x >= 0 ? x % y : y - 1 - ((-x-1) % y))
+
 rgb_f const& Object3D::getTexturePoint(float s, float t) const {
-    return texture[(int)(s*textWidth)+(int)(t*textHeight)*textWidth]; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
+    int x = (int)(s*textWidth), y = (int)(t*textHeight);
+    return texture[mod(x, textWidth) + mod(y, textHeight) * textWidth]; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
 }
 float Object3D::getSpecularPoint(float s, float t) const {
-    return texture_specular[(int)(s*textSpecularWidth)+(int)(t*textSpecularHeight)*textSpecularWidth].r; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
+    int x = (int)(s*textSpecularWidth), y = (int)(t*textSpecularHeight);
+    return texture_specular[mod(x, textSpecularWidth) + mod(y, textSpecularHeight) * textSpecularWidth].r; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
 }
 const float* Object3D::getNormalPoint(float s, float t) const {
-    return (const float*) &texture_normal[(int)(s*textNormalWidth)+(int)(t*textNormalHeight)*textNormalWidth]; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
+    int x = (int)(s*textNormalWidth), y = (int)(t*textNormalHeight);
+    return (const float*) &texture_normal[mod(x, textNormalWidth) + mod(y, textNormalHeight) * textNormalWidth]; /// Warning /!\ : should be x=s*(textWidth+1), y=t*(textHeight+1), x==w?x--, y==h?y--
 }
 void Object3D::initColor()
 {

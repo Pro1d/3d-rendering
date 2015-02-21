@@ -81,14 +81,15 @@ float smoothStep(float min, float max, float x)
 /// return the normal of the triangle face; z component is positive if A, B, C are in anti-clockwise;
 void getFaceNormal(float* A, float* C, float* B, float *n) {
     /// N = AC vect AB
-    n[0] = (B[1]-A[1])*(C[2]-A[2]) - (C[1]-A[1])*(B[2]-A[2]);
-    n[1] = (B[2]-A[2])*(C[0]-A[0]) - (C[2]-A[2])*(B[0]-A[0]);
-    n[2] = (B[0]-A[0])*(C[1]-A[1]) - (C[0]-A[0])*(B[1]-A[1]);
+    n[0] = -((B[1]-A[1])*(C[2]-A[2]) - (C[1]-A[1])*(B[2]-A[2]));
+    n[1] = -((B[2]-A[2])*(C[0]-A[0]) - (C[2]-A[2])*(B[0]-A[0]));
+    n[2] = -((B[0]-A[0])*(C[1]-A[1]) - (C[0]-A[0])*(B[1]-A[1]));
+    normalizeVector(n);/*
     float norm = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
     if(norm > 0) {
         n[0] /= -norm;
         n[1] /= -norm;
         n[2] /= -norm;
-    }
+    }*/
 }
 
