@@ -3,6 +3,7 @@
 
 #include "color.h"
 #include "Engine3D.h"
+#include "Noise2D.h"
 
 class PostEffect
 {
@@ -33,20 +34,24 @@ class DistanceFog : public PostEffect
         DistanceFog(rgb_f *color, float *depth, rgb_f* destination, int width, int height, rgb_f const& fogColor, float density);
         void setFogDensity(float d);
         float getFogDensity();
+        void setNoiseDensity(float d) { noiseIntensity = d; }
+        float getNoiseDensity() { return noiseIntensity; }
         void setFogColor(rgb_f const& color);
         void apply();
     private:
         rgb_f fogColor;
-        float density;
+        float density, noiseIntensity;
+        Noise2D noise;
 };
 
 class DepthOfField : public PostEffect
 {
     public:
-        DepthOfField(rgb_f *color, float *depth, rgb_f* destination, int witdh, int height, float depthFocus, float depthMax, float radiusMax = ANTI_ALIASING ? 14 : 7.5);
+        DepthOfField(rgb_f *color, float *depth, rgb_f* destination, int witdh, int height, float depthFocus, float depthMax, float radiusMax = ANTI_ALIASING ? 14.0f : 7.5f);
         void setDepthFocus(float focus);
         void setDepthMax(float max);
         void setRadiusMax(float radius);
+        float getRadiusMax() { return radiusMax; }
         void apply();
     private:
         float depthFocus, depthMax, radiusMax;

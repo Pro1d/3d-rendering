@@ -10,6 +10,10 @@
 #include "Physic3D.h"
 #include "PostEffect.h"
 
+/**
+ * Contrôles -> "raccourcis clavier.txt"
+ **/
+
 #define TAILLE  (512)
 #define WIDTH   (TAILLE+256)
 #define HEIGHT  (TAILLE)
@@ -50,7 +54,7 @@ int main ( int argc, char** argv )
     Engine3D engine3d(bmp3d);
 
     Object3DBuffer objBuffer;
-    char sceneFileName[128] = "data/room.scene";
+    char sceneFileName[128] = "data/parc.scene";
     if(argc > 1)
         strcpy(sceneFileName, argv[1]);
     Scene scene(sceneFileName, objBuffer);
@@ -110,7 +114,7 @@ int main ( int argc, char** argv )
                 }
                 if(buttonLeftDown) {
                     engine3d.setPixelFocus(event.motion.x, event.motion.y);
-                    float depthFocus = engine3d.getDepthBuf()[event.motion.x + engine3d.getWidth() * event.motion.y];
+                    float depthFocus = engine3d.getDepthBuf()[event.motion.x*(1+ANTI_ALIASING) + engine3d.getWidth() * event.motion.y*(1+ANTI_ALIASING)];
                     if(SDL_GetModState()&KMOD_ALT)
                         dof.setDepthMax(depthFocus);
                     else
@@ -159,12 +163,15 @@ int main ( int argc, char** argv )
                             rayTracingRenderingRequested = true;
                         break;
                     case SDLK_p: {
-                        time_t rawtime = time(NULL);
+                        time_t rawtime; time(&rawtime);
                         struct tm *date = localtime(&rawtime);
                         char fileName[150], dateStr[150];
-                        strftime(dateStr, 150, "%F %Hh%Mm%S", date);
+                        strftime(dateStr, 150, "%Y-%m-%d_%H-%M-%S", date);
+                        SDL_Surface *s = SDL_CreateRGBSurface(SDL_HWSURFACE, WIDTH, HEIGHT, 24, 0,0,0,0);
+                        SDL_BlitSurface(bmp3d, NULL, s, NULL);
                         sprintf(fileName, "capture - %s.bmp", dateStr);
-                        SDL_SaveBMP(bmp3d, fileName);
+                        SDL_SaveBMP(s, fileName);
+                        SDL_FreeSurface(s);
                     }   break;
                     case SDLK_ESCAPE:
                         done = true;
@@ -200,15 +207,29 @@ int main ( int argc, char** argv )
                         scale++;
                         break;
                     case SDLK_f:
-                        dof.toggleEnabled();
-                        engine3d.toggleDepthOfField();
+                        if((SDL_GetModState()&KMOD_SHIFT)) {
+                            dof.setRadiusMax(dof.getRadiusMax()*1.1f);
+                        }
+                        else if((SDL_GetModState()&KMOD_CTRL)) {
+                            dof.setRadiusMax(dof.getRadiusMax()/1.1f);
+                        }
+                        else {
+                            dof.toggleEnabled();
+                            engine3d.toggleDepthOfField();
+                        }
                         break;
                     case SDLK_g:
                         if((SDL_GetModState()&KMOD_SHIFT)) {
-                            fog.setFogDensity(fog.getFogDensity()*1.1f);
+                            if((SDL_GetModState()&KMOD_ALT))
+                                fog.setNoiseDensity(fog.getNoiseDensity()+.1f);
+                            else
+                                fog.setFogDensity(fog.getFogDensity()*1.1f);
                         }
                         else if((SDL_GetModState()&KMOD_CTRL)) {
-                            fog.setFogDensity(fog.getFogDensity()/1.1f);
+                            if((SDL_GetModState()&KMOD_ALT))
+                                fog.setNoiseDensity(fog.getNoiseDensity()-.1f);
+                            else
+                                fog.setFogDensity(fog.getFogDensity()/1.1f);
                         }
                         else {
                             fog.toggleEnabled();
@@ -286,11 +307,11 @@ int main ( int argc, char** argv )
                 Engine3D::toBitmap(bmp3d, engine3d.getColorBuf(), engine3d.getWidth(), engine3d.getHeight());
             }
         }
-        /// Affichage du temps de rendu
-        drawNumber(bmp3d, SDL_MapRGB(bmp3d->format, 0,255,255), 10,10, 12, t);
 
         /// Mise à jour de la fenêtre
         SDL_BlitSurface(bmp3d, NULL, screen, NULL);
+        /// Affichage du temps de rendu
+        drawNumber(screen, SDL_MapRGB(bmp3d->format, 0,255,255), 10,10, 12, t);
         SDL_Flip(screen);
 
         Uint32 time = SDL_GetTicks() - frameStartTime;
@@ -319,6 +340,7 @@ void putPixel(int x, int y, Uint32 pixel, SDL_Surface *src)
     }
 }
 void drawNumber(SDL_Surface* src, int color, int px, int py, int size, float number) {
+    SDL_LockSurface(src);
     bool numberMat[10*7] = {
         1,1,1,0,1,1,1,
         0,0,1,0,0,1,0,
@@ -358,6 +380,7 @@ void drawNumber(SDL_Surface* src, int color, int px, int py, int size, float num
                     putPixel(px+(e+3*f)*i+x, py+y, color, src);
             }
     }
+    SDL_UnlockSurface(src);
 }
 
 

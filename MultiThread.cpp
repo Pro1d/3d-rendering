@@ -1,6 +1,7 @@
 #include "MultiThread.h"
 #include "SDL_thread.h"
 #include <cstdio>
+#include <queue>
 
 int host(void* p) {
     thread_params_t *thp = (thread_params_t*)p;
@@ -76,8 +77,16 @@ void MultiThread::execute(void (*func)(thread_params_t*), void* p)
     #endif
 
     for(int i = 0; i < threadCount; i++)
-        params[i].syncEnd.wait();
+        params[i].syncEnd.waitAndPollEvent(eventQueue);
     #ifdef DEBUG
     //    printf("END TASK\n");
     #endif
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
+        eventQueue.push(event);
+    while(!eventQueue.empty())
+    {
+        event = eventQueue.front(); eventQueue.pop();
+        SDL_PushEvent(&event);
+    }
 }

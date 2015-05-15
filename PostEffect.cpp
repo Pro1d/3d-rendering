@@ -16,7 +16,7 @@ PostEffect::~PostEffect()
 }
 
 DistanceFog::DistanceFog(rgb_f *color, float *depth, rgb_f* destination, int width, int height, rgb_f const& fogColor, float density) :
-    PostEffect(color, depth, destination, width, height), fogColor(fogColor), density(density)
+    PostEffect(color, depth, destination, width, height), fogColor(fogColor), density(density), noise(width, height), noiseIntensity(0.9f)
 {
 
 }
@@ -35,7 +35,8 @@ void DistanceFog::setFogColor(rgb_f const& color)
 void DistanceFog::apply()
 {
     for(int i = width * height; --i >= 0;) {
-        float k = pow((1-density), depth[i]);
+        float localDensity = (1 + noiseIntensity*(noise.get(i) - 1)) * density;
+        float k = pow((1-localDensity), depth[i]);
         dst[i] = color[i] * k + fogColor * (1-k);
     }
 }

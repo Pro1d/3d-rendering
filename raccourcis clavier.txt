@@ -1,0 +1,24 @@
+ ************************** Contrôles **************************
+ * clic gauche : point de focus - depth of field
+ * clic droite (maintenir) + mouvement: rotation camera
+ * F10 : render ray tracing
+ * p : capture
+ * Echap : quitter
+ * ZQSD/ flèches directionnelles : se déplacer
+ * Espace : se déplacer - monter
+ * Shift : se déplacer - Descendre
+ * A / E : grossir / rétrécir l'environnement
+ * F : activer/désactiver depth of field
+ * Ctrl-F : réduire rayon max de flou depth of field
+ * Shift-F : augmenter rayon max de flou depth of field
+ * G : activer/désactiver le brouillard
+ * Ctrl-G : réduire la densité du brouillard
+ * Shift-G : augmenter la densité du brouillard
+ * Ctrl-Alt-G : réduire la densité du brouillard bruité
+ * Shift-Alt-G : augmenter la densité du brouillard bruité
+ * B : activer/desactiver glow
+ * M : activer/desactiver blur motion
+ * Y : activer/desactiver dessin
+ * W : augmenter fov
+ * X : réduire fov
+ ***************************************************************

@@ -1185,12 +1185,13 @@ void Engine3D::filters2D() {
     /// Anti-aliasing -> SDL_Bitmap 2* plus grand
     //*
     #if ANTI_ALIASING == 1
+    if(!enableRayTracing)
         for(int y = 0; y < height; y+=2)
         for(int x = 0; x < width; x+=2) {
-            colorBuf[x/2+y/2*width] = colorBuf[x + y*width]*0.25f
-                + colorBuf[x+1 + y*width]*0.25f
-                + colorBuf[x + (y+1)*width]*0.25f
-                + colorBuf[x+1 + (y+1)*width]*0.25f;
+            colorBuf[x/2+y/2*width] = (colorBuf[x + y*width]
+                + colorBuf[x+1 + y*width]
+                + colorBuf[x + (y+1)*width]
+                + colorBuf[x+1 + (y+1)*width])*0.25f;
         }//*/
     #endif
     /// déformations
@@ -1220,17 +1221,23 @@ void Engine3D::toBitmap() {
 }
 void Engine3D::toBitmap(SDL_Surface *bmp, rgb_f* color, int width, int height) {
     Uint8 bpp = bmp->format->BytesPerPixel;
-    for(int y = 0; y < height; ++y)
-    for(int x = 0; x < width; ++x) {
-        Uint8 *p = (Uint8 *)bmp->pixels + y * bmp->pitch + x * bpp;
+    for(int y = 0; y < height; y += 1+ANTI_ALIASING)
+    for(int x = 0; x < width; x += 1+ANTI_ALIASING) {
+        #if ANTI_ALIASING == 1
+            Uint8 *p = (Uint8 *)bmp->pixels + y/2 * bmp->pitch + x/2 * bpp;
+            rgb_f clr((color[x+y*width]+color[x+1+y*width]+color[x+(y+1)*width]+color[x+1+(y+1)*width])*0.25f);
+        #else
+            Uint8 *p = (Uint8 *)bmp->pixels + y * bmp->pitch + x * bpp;
+            rgb_f &clr(color[x+y*width]);
+        #endif
         if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
-            p[0] = clampIn01(color[x+y*width].r) * 255;
-            p[1] = clampIn01(color[x+y*width].g) * 255;
-            p[2] = clampIn01(color[x+y*width].b) * 255;
+            p[0] = clampIn01(clr.r) * 255;
+            p[1] = clampIn01(clr.g) * 255;
+            p[2] = clampIn01(clr.b) * 255;
         } else {
-            p[0] = clampIn01(color[x+y*width].b) * 255;
-            p[1] = clampIn01(color[x+y*width].g) * 255;
-            p[2] = clampIn01(color[x+y*width].r) * 255;
+            p[0] = clampIn01(clr.b) * 255;
+            p[1] = clampIn01(clr.g) * 255;
+            p[2] = clampIn01(clr.r) * 255;
         }
     }
 }

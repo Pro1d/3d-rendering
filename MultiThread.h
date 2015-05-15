@@ -2,6 +2,8 @@
 #define MULTITHREAD_H
 
 #include <SDL_thread.h>
+#include <SDL.h>
+#include <queue>
 
 class ThreadSync {
     public:
@@ -13,7 +15,18 @@ class ThreadSync {
         void wait() {
             SDL_LockMutex(mutex);
             while(!sync)
-                SDL_CondWait(cond, mutex);
+                SDL_CondWaitTimeout(cond, mutex, 5);
+            SDL_UnlockMutex(mutex);
+            sync = false;
+        }
+        void waitAndPollEvent(std::queue<SDL_Event> & eventQueue) {
+            SDL_LockMutex(mutex);
+            while(!sync) {
+                SDL_CondWaitTimeout(cond, mutex, 5);
+                SDL_Event event;
+                if(SDL_PollEvent(&event))
+                    eventQueue.push(event);
+            }
             SDL_UnlockMutex(mutex);
             sync = false;
         }
@@ -49,6 +62,7 @@ class MultiThread
         int threadCount;
         SDL_Thread **threads;
         thread_params_t *params;
+        std::queue<SDL_Event> eventQueue;
 };
 
 #endif // MULTITHREAD_H

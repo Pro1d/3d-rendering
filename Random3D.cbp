@@ -61,6 +61,8 @@
 		<Unit filename="Model3D.h" />
 		<Unit filename="MultiThread.cpp" />
 		<Unit filename="MultiThread.h" />
+		<Unit filename="Noise2D.cpp" />
+		<Unit filename="Noise2D.h" />
 		<Unit filename="Object3D.cpp" />
 		<Unit filename="Object3D.h" />
 		<Unit filename="Physic3D.cpp" />
