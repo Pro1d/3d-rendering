@@ -14,9 +14,10 @@
 
 class ListCell {
     public:
-        ListCell(std::list<int> const& f) : faces(f), next(NULL) {}
+        ListCell(std::list<int> const& f) : faces(f), next(NULL), canStopResearch(false) {}
         std::list<int> const& faces;
         ListCell *next;
+        bool canStopResearch;
 };
 
 enum {axisX, axisY, axisZ};
@@ -27,8 +28,11 @@ class KDTree
         KDTree(KDTree& parent, int subIndex, Scene const &scene, int height=1);
         virtual ~KDTree();
         ListCell* getFaceInBoxCollWithRay_M_kay_IfYouSeeWhatIMean(float const* rayOrig, float const* rayDir, ListCell *prevCell=NULL);
+        bool isSubTreeCollWithRay(float const* rayOrig, float const* rayDir, int subNum);
+        void getSubTreeColl(float const* rayOrig, float const* rayDir, int &first, int &second);
+        int getSecondSubTreeColl(float const* rayOrig, float const* rayDir, int first);
 
-        KDTree* subTree[2];
+        KDTree* subTree[2]; /// index 1 : min = parent.middle, index 0 : max = parent.middle
         int cutAxis;
         float xmin, xmax, ymin, ymax, zmin, zmax;
         std::list<int> faceInside;

@@ -28,20 +28,100 @@ RayTracing::~RayTracing()
         interpoler normal (normal texture ?) (linéaire ou rotation)
             calculer lumière diffuse (collision entre point/lumière avec objet)
             calculer lumière spécular (collision entre point/lumière avec objet ?) ?
-    calculer rayon réfléchi + coéficient rfl
-    calculer rayon refracté + coéficient rfr (rfl + rfr = 1)
+    calculer rayon réfléchi + coefficient rfl
+    calculer rayon refracté + coefficient rfr (rfl + rfr = 1)
 */
 
-/*void RayTrancing::getReflectRay(RayData const& incident, RayData &reflect) {
-
+bool RayTracing::updateMinFaceCollision(list<int> const& faces, int &faceColl, float &distMin, FaceCollParams &params) {
+    bool updated = false;
+    for(list<int>::const_iterator it = faces.begin(); it != faces.end(); ++it)
+    if(params.lastFaceColl != *it) {
+        Drawable_Face &f = params.sceneBuffer.getFace(*it);
+        Transf_Vertex &v1 = params.sceneBuffer.getVertex(f.vertex_indices[0]);
+        Transf_Vertex &v2 = params.sceneBuffer.getVertex(f.vertex_indices[1]);
+        Transf_Vertex &v3 = params.sceneBuffer.getVertex(f.vertex_indices[2]);
+        float dot = f.n[0]*params.ray.dir[0] + f.n[1]*params.ray.dir[1] + f.n[2]*params.ray.dir[2];
+        if(dot < 0 || ((const Object3D*)v1.objParent)->isVolumeTranslucent)
+        if(Physic3D::collisionFaceStraightLine(v1.p, v2.p, v3.p, params.ray.dir, params.ray.orig)) /// TODO collision face orientée
+        {
+            float d = getDist(v1, v2, v3, params.ray);
+            if(d > 0 && (faceColl == -1 || d < distMin))
+            {
+                distMin = d;
+                faceColl = *it;
+                params.out_reverseSide = (dot >= 0);
+                updated = true;
+            }
+        }
+    }
+    return updated;
 }
-void RayTrancing::getRefractRay(RayData const& incident, RayData &refract) {
+/// ////////////////////////////////////////////////////////////////// ///
+/// TODO moins de paramètres pour plus de performance ? Pas récursif ? ///
+/// ////////////////////////////////////////////////////////////////// ///
 
+int RayTracing::getFaceCollision(RayData const& ray, Scene &sceneBuffer, float &out_dist, bool &out_reverseSide, int lastFaceColl) {
+    FaceCollParams params(ray, sceneBuffer, out_dist, out_reverseSide, lastFaceColl);
+    return getFaceCollision(params, currentTree);
 }
-void RayTracing::getCoefFace(Transf_Vertex const& A, Transf_Vertex const& B, Transf_Vertex const& C, float *rayDir, float *rayOrig, float *coefOut) {
+int RayTracing::getFaceCollision(FaceCollParams &params, KDTree *currentTree)
+{
+    int first, second;
+    currentTree->getSubTreeColl(params.ray.orig, params.ray.dir, first, second);
 
+    params.out_dist = 0;
+    int faceColl = -1;
+
+    if(first != -1) {
+        /// recherche dans le premier sous bloc
+        faceColl = getFaceCollision(params, currentTree->subTree[first]);
+
+        /// si toujours rien trouvé...
+        if(faceColl == -1) {
+            /*if(second == -2)
+                second = currentTree->getSecondSubTreeColl(ray.orig, ray.dir, first);*/
+
+            /// recherche dans le deuxième sous bloc
+            if(second != -1)
+                faceColl = getFaceCollision(params, currentTree->subTree[second]);
+        }
+    }
+
+    /// recherche parmi les faces de cette branche
+    updateMinFaceCollision(currentTree->faceInside, faceColl, params.out_dist, params);
+
+    return faceColl;
+}
+/*bool RayTracing::isFaceCollision(const float *rayDir, const float *rayOrig, Scene const &sceneBuffer, float distMax, int lastFaceColl) {
+    FaceCollParams params(ray, sceneBuffer, out_dist, out_reverseSide, lastFaceColl);
+    return
 }*/
+bool RayTracing::isFaceCollision(const float *rayDir, const float *rayOrig, Scene const &sceneBuffer, float distMax, int lastFaceColl, KDTree *currentTree)
+{
+    if(currentTree == NULL)
+        currentTree = this->currentTree;
 
+    if(currentTree->isSubTreeCollWithRay(rayOrig, rayDir, 0)
+            && isFaceCollision(rayDir, rayOrig, sceneBuffer, distMax, lastFaceColl, currentTree->subTree[0]))
+        return true;
+    if(currentTree->isSubTreeCollWithRay(rayOrig, rayDir, 1)
+            && isFaceCollision(rayDir, rayOrig, sceneBuffer, distMax, lastFaceColl, currentTree->subTree[1]))
+        return true;
+    for(list<int>::const_iterator it = currentTree->faceInside.begin(); it != currentTree->faceInside.end(); ++it)
+    if(lastFaceColl != *it) {
+        Drawable_Face const&f = sceneBuffer.getFace(*it);
+        Transf_Vertex const&v1 = sceneBuffer.getVertex(f.vertex_indices[0]);
+        Transf_Vertex const&v2 = sceneBuffer.getVertex(f.vertex_indices[1]);
+        Transf_Vertex const&v3 = sceneBuffer.getVertex(f.vertex_indices[2]);
+        if(Physic3D::collisionFaceStraightLineDirect(v1.p, v2.p, v3.p, f.n, rayDir, rayOrig)) { /// TODO collision face orientée
+            float dist = Physic3D::collisionFaceVectorCoef(v1.p, v1.n, rayDir, rayOrig);
+            if(dist > 0 && dist < distMax)
+                return true;
+        }
+    }
+
+    return false;
+}/*
 int RayTracing::getFaceCollision(RayData const& ray, Scene &sceneBuffer, float &distOut, bool &reverseSideOut, int lastFaceColl)
 {
     ListCell *cell = currentTree->getFaceInBoxCollWithRay_M_kay_IfYouSeeWhatIMean(ray.orig, ray.dir);
@@ -101,7 +181,7 @@ bool RayTracing::isFaceCollision(const float *rayDir, const float *rayOrig, Scen
     }
 
     return false;
-}
+}*/
 
 /*
 int RayTracing::getFaceCollision(const float *rayDir, const float *rayOrig, Scene &sceneBuffer, float &distOut, int lastFaceColl) {

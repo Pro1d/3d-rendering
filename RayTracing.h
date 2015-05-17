@@ -18,6 +18,17 @@ class RayData {
         //Object3d* material;
 };
 
+class FaceCollParams {
+public:
+    FaceCollParams(RayData const& ray, Scene &sceneBuffer, float &out_dist, bool &out_reverseSide, int lastFaceColl):
+        ray(ray), sceneBuffer(sceneBuffer), out_dist(out_dist), out_reverseSide(out_reverseSide), lastFaceColl(lastFaceColl) {}
+    RayData const& ray;
+    Scene &sceneBuffer;
+    float &out_dist;
+    bool &out_reverseSide;
+    int lastFaceColl;
+};
+
 class RayTracing
 {
     public:
@@ -30,8 +41,10 @@ class RayTracing
         void render(Scene &sceneBuffer);
         void renderMutliThread(Scene &sceneBuffer, MultiThread &mt);
 
+        bool updateMinFaceCollision(std::list<int> const& faces, int &faceColl, float &distMin, FaceCollParams &params);
+        int getFaceCollision(FaceCollParams &params, KDTree *currentTree);
         int getFaceCollision(RayData const& ray, Scene &sceneBuffer, float &distOut, bool &reverseSideOut, int lastFaceColl);
-        bool isFaceCollision(const float *rayDir, const float *rayOrig, Scene const &sceneBuffer, float distMax, int lastFaceColl);
+        bool isFaceCollision(const float *rayDir, const float *rayOrig, Scene const &sceneBuffer, float distMax, int lastFaceColl, KDTree *currentTree=NULL);
         void getCoef(Transf_Vertex const& A, Transf_Vertex const& B, Transf_Vertex const& C, RayData const& ray, float *coef);
         float getDist(Transf_Vertex const& A, Transf_Vertex const& B, Transf_Vertex const& C, RayData const& ray);
 

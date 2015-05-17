@@ -54,7 +54,7 @@ int main ( int argc, char** argv )
     Engine3D engine3d(bmp3d);
 
     Object3DBuffer objBuffer;
-    char sceneFileName[128] = "data/parc.scene";
+    char sceneFileName[128] = "data/room.scene";
     if(argc > 1)
         strcpy(sceneFileName, argv[1]);
     Scene scene(sceneFileName, objBuffer);

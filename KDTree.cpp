@@ -211,10 +211,10 @@ bool collisionRayBox(float const* rayOrig, float const* rayDir, KDTree const& bo
 }
 
 /// TODO
-ListCell* KDTree::getFaceInBoxCollWithRay_M_kay_IfYouSeeWhatIMean(float const* rayOrig, float const* rayDir, ListCell *prevCell) {
+ListCell* KDTree::getFaceInBoxCollWithRay_M_kay_IfYouSeeWhatIMean(float const* rayOrig, float const* rayDir, ListCell *nextCell) {
     ListCell* cell = new ListCell(faceInside);
-    if(prevCell != NULL)
-        cell->next = prevCell;
+    if(nextCell != NULL)
+        cell->next = nextCell;
 
     /// Test de collision avec les sous trucs
     if(subTree[0] != NULL && (isInside(rayOrig, *subTree[0]) || collisionRayBox(rayOrig, rayDir, *subTree[0])))
@@ -223,4 +223,152 @@ ListCell* KDTree::getFaceInBoxCollWithRay_M_kay_IfYouSeeWhatIMean(float const* r
         cell = subTree[1]->getFaceInBoxCollWithRay_M_kay_IfYouSeeWhatIMean(rayOrig, rayDir, cell);
 
     return cell;
+}
+
+bool KDTree::isSubTreeCollWithRay(float const* rayOrig, float const* rayDir, int subNum) {
+    if(subTree[subNum] != NULL && (isInside(rayOrig, *subTree[subNum]) || collisionRayBox(rayOrig, rayDir, *subTree[subNum])))
+        return true;
+    return false;
+}
+
+void KDTree::getSubTreeColl(float const* rayOrig, float const* rayDir, int &out_first, int &out_second) {
+    out_first = -1;
+    out_second = -1;
+
+    /// Si un seul ou aucun sub tree existe, c'est vite vu..
+    if(subTree[0] == NULL) {
+        if(subTree[1] != NULL)
+            out_first = 1;
+        return;
+    }
+    else if(subTree[1] == NULL) {
+        out_first = 0;
+        return;
+    }
+
+    /// on dans un des sub tree
+   /* if(isInside(rayOrig, *subTree[0])) {
+        out_first = 0;
+
+        out_second = -2;
+        return;
+    }
+    if(isInside(rayOrig, *subTree[1])) {
+        out_first = 1;
+        out_second = -2;
+        return;
+    }*/
+
+    /// collision avec les 2 sub tree
+    /// Si on coupe le plan du milieu (plan en commun), cela dépend de la direction
+    switch(cutAxis) {
+    case axisX: {
+        float x = subTree[0]->xmax;
+        float a[3] = {x, ymin, zmin};
+        float b[3] = {x, ymin, zmax};
+        float c[3] = {x, ymax, zmax};
+        float d[3] = {x, ymax, zmin};
+        bool middleColl = (rayDir[0] > 0 ? x > rayOrig[0] : x < rayOrig[0])
+                && collisionFaceQuadStraightLine(a,b,c,d, rayDir, rayOrig);
+        if(middleColl) {
+            if(rayDir[0] > 0) {
+                out_first = 0;
+                out_second = 1;
+            } else {
+                out_first = 1;
+                out_second = 0;
+            }
+            return;
+        }
+        break;
+    }
+    case axisY: {
+        float y = subTree[0]->ymax;
+        float a[3] = {xmin, y, zmin};
+        float b[3] = {xmin, y, zmax};
+        float c[3] = {xmax, y, zmax};
+        float d[3] = {xmax, y, zmin};
+        bool middleColl = (rayDir[1] > 0 ? y > rayOrig[1] : y < rayOrig[1])
+                && collisionFaceQuadStraightLine(a,b,c,d, rayDir, rayOrig);
+        if(middleColl) {
+            if(rayDir[1] > 0) {
+                out_first = 0;
+                out_second = 1;
+            } else {
+                out_first = 1;
+                out_second = 0;
+            }
+            return;
+        }
+        break;
+    }
+    case axisZ: {
+        float z = subTree[0]->zmax;
+        float a[3] = {xmin, ymin, z};
+        float b[3] = {xmin, ymax, z};
+        float c[3] = {xmax, ymax, z};
+        float d[3] = {xmax, ymin, z};
+        bool middleColl = (rayDir[2] > 0 ? z > rayOrig[2] : z < rayOrig[2])
+                && collisionFaceQuadStraightLine(a,b,c,d, rayDir, rayOrig);
+        if(middleColl) {
+            if(rayDir[2] > 0) {
+                out_first = 0;
+                out_second = 1;
+            } else {
+                out_first = 1;
+                out_second = 0;
+            }
+            return;
+        }
+        break;
+    }
+    }
+
+    /// collision avec un seul des 2 sub tree
+    if(isInside(rayOrig, *subTree[0]) || collisionRayBox(rayOrig, rayDir, *subTree[0]))
+        out_first = 0;
+    else if(isInside(rayOrig, *subTree[1]) || collisionRayBox(rayOrig, rayDir, *subTree[1]))
+        out_first = 1;
+}
+int KDTree::getSecondSubTreeColl(float const* rayOrig, float const* rayDir, int first) {
+    /// Un sub tree a déjà été selectionné, si le deuxieme est touché alors le rayon passe par le plan en commun
+
+    int i = !first;
+    /*// l'autre sub tree n'existe pas
+    if(subTree[i] == NULL)
+        return -1;*/
+
+    bool middleColl = false;
+    ///
+    switch(cutAxis) {
+    case axisX: {
+        float x = subTree[0]->xmax;
+        float a[3] = {x, ymin, zmin};
+        float b[3] = {x, ymin, zmax};
+        float c[3] = {x, ymax, zmax};
+        float d[3] = {x, ymax, zmin};
+        middleColl = collisionFaceQuadStraightLine(a,b,c,d, rayDir, rayOrig);
+        break;
+    }
+    case axisY: {
+        float y = subTree[0]->ymax;
+        float a[3] = {xmin, y, zmin};
+        float b[3] = {xmin, y, zmax};
+        float c[3] = {xmax, y, zmax};
+        float d[3] = {xmax, y, zmin};
+        middleColl = collisionFaceQuadStraightLine(a,b,c,d, rayDir, rayOrig);
+        break;
+    }
+    case axisZ: {
+        float z = subTree[0]->zmax;
+        float a[3] = {xmin, ymin, z};
+        float b[3] = {xmin, ymax, z};
+        float c[3] = {xmax, ymax, z};
+        float d[3] = {xmax, ymin, z};
+        middleColl = collisionFaceQuadStraightLine(a,b,c,d, rayDir, rayOrig);
+        break;
+    }
+    }
+
+    return middleColl ? i : -1;
 }
